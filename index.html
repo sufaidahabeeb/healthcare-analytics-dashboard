@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HealthCore — Executive Intelligence Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060a12;
+    --surface: #0d1420;
+    --surface2: #121b2e;
+    --border: rgba(255,255,255,0.07);
+    --border-bright: rgba(99,179,237,0.25);
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --accent3: #8b5cf6;
+    --success: #10b981;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --text-mid: #94a3b8;
+    --glow: rgba(59,130,246,0.15);
+    --glow2: rgba(6,182,212,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid noise texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .orb1 {
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
+    top: -200px;
+    right: -100px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb2 {
+    position: fixed;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%);
+    bottom: 0;
+    left: -100px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .dashboard {
+    position: relative;
+    z-index: 1;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-block { display: flex; flex-direction: column; gap: 4px; }
+
+  .logo-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent2);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .logo-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #e2e8f0 0%, #63b3ed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .logo-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--success);
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--success);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .date-chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* NAV TABS */
+  .nav-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    width: fit-content;
+  }
+
+  .tab {
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-dim);
+    transition: all 0.2s;
+    border: none;
+    background: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 0 20px rgba(59,130,246,0.3);
+  }
+
+  /* PAGES */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* KPI ROW */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+    cursor: default;
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-color, var(--accent)), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .kpi-card:hover { transform: translateY(-2px); border-color: var(--border-bright); }
+  .kpi-card:hover::before { opacity: 1; }
+
+  .kpi-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .kpi-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .kpi-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .kpi-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  .badge-up { background: rgba(16,185,129,0.15); color: var(--success); }
+  .badge-warn { background: rgba(245,158,11,0.15); color: var(--warn); }
+  .badge-info { background: rgba(59,130,246,0.15); color: var(--accent); }
+
+  .kpi-icon {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  /* GRID LAYOUTS */
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+
+  /* CHART CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+
+  .card-subtitle {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+
+  /* DONUT CHART */
+  .donut-wrap {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .donut-svg { flex-shrink: 0; }
+
+  .donut-legend { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .legend-label { color: var(--text-mid); flex: 1; }
+  .legend-val { color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px; }
+  .legend-pct { color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 10px; }
+
+  /* BAR CHART */
+  .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+
+  .bar-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 70px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .bar-label { font-size: 12px; color: var(--text-mid); text-align: right; }
+
+  .bar-track {
+    height: 8px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .bar-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mid);
+    text-align: right;
+  }
+
+  /* LINE CHART SVG */
+  .line-chart-wrap { position: relative; }
+
+  /* PROGRESS RING */
+  .ring-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  .ring-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ring-label { font-size: 12px; color: var(--text-mid); text-align: center; }
+  .ring-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+
+  /* TABLE */
+  .data-table { width: 100%; border-collapse: collapse; }
+
+  .data-table th {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table td {
+    padding: 12px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    color: var(--text-mid);
+  }
+
+  .data-table tr:last-child td { border-bottom: none; }
+
+  .data-table tr:hover td { background: rgba(59,130,246,0.04); color: var(--text); }
+
+  .td-primary { color: var(--text) !important; font-weight: 500; }
+
+  /* SPARKLINE */
+  .sparkline { display: inline-block; }
+
+  /* HEATMAP CELLS */
+  .heatmap { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+
+  .heat-cell {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: rgba(255,255,255,0.7);
+    cursor: default;
+    transition: transform 0.15s;
+  }
+
+  .heat-cell:hover { transform: scale(1.1); }
+
+  /* SECTION DIVIDER */
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* SCORE METER */
+  .score-meter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+  }
+
+  /* STAT PILL */
+  .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+  .stat-pill {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat-pill-label { font-size: 11px; color: var(--text-dim); }
+  .stat-pill-val { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; }
+
+  /* TOOLTIP */
+  .tooltip {
+    position: absolute;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    pointer-events: none;
+    display: none;
+    z-index: 100;
+    white-space: nowrap;
+    font-family: 'DM Mono', monospace;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .kpi-card { animation: fadeUp 0.4s ease both; }
+  .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+  .kpi-card:nth-child(2) { animation-delay: 0.1s; }
+  .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+  .kpi-card:nth-child(4) { animation-delay: 0.2s; }
+
+  .card { animation: fadeUp 0.4s ease both; animation-delay: 0.25s; }
+
+  /* GAUGE */
+  .gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+  /* FILTER BAR */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* ALERT STRIP */
+  .alert-strip {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--warn);
+  }
+
+  .alert-strip span { color: var(--text-mid); }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 1100px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-2-1, .grid-1-2 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: repeat(2, 1fr); }
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 600px) {
+    .kpi-row { grid-template-columns: 1fr; }
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .donut-wrap { flex-direction: column; }
+    header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb1"></div>
+<div class="orb2"></div>
+
+<div class="dashboard">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-block">
+      <div class="logo-tag">Executive Intelligence</div>
+      <div class="logo-name">HealthCore Analytics</div>
+      <div class="logo-sub">Patient Operations · Financial Performance · Clinical Outcomes</div>
+    </div>
+    <div class="header-right">
+      <div class="date-chip">Dataset: 2019 – 2024 · N=55,500</div>
+      <div class="live-badge"><div class="live-dot"></div>LIVE DASHBOARD</div>
+    </div>
+  </header>
+
+  <!-- NAV TABS -->
+  <div class="nav-tabs">
+    <button class="tab active" onclick="switchTab('overview')">Overview</button>
+    <button class="tab" onclick="switchTab('clinical')">Clinical</button>
+    <button class="tab" onclick="switchTab('financial')">Financial</button>
+    <button class="tab" onclick="switchTab('operations')">Operations</button>
+  </div>
+
+  <!-- ========== OVERVIEW PAGE ========== -->
+  <div class="page active" id="page-overview">
+
+    <!-- KPI ROW -->
+    <div class="kpi-row">
+      <div class="kpi-card" style="--accent-color: var(--accent)">
+        <div class="kpi-icon" style="background: rgba(59,130,246,0.15)">🏥</div>
+        <div class="kpi-label">Total Patients</div>
+        <div class="kpi-value" style="color: var(--accent)">55,500</div>
+        <div class="kpi-sub"><span class="kpi-badge badge-up">↑ Active</span> All-time admissions</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--success)">
+        <div class="kpi-icon" style="background: rgba(16,185,129,0.15)">💰</div>
+        <div class="kpi-label">Total Revenue</div>
+        <div class="kpi-value" style="color: var(--success)">$1.42B</div>
+        <div class="kpi-sub"><span class="kpi-badge badge-up">↑ 8.3%</span> vs prior period</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--accent2)">
+        <div class="kpi-icon" style="background: rgba(6,182,212,0.15)">📋</div>
+        <div class="kpi-label">Avg Billing / Patient</div>
+        <div class="kpi-value" style="color: var(--accent2)">$25.5K</div>
+        <div class="kpi-sub"><span class="kpi-badge badge-info">Stable</span> Per admission</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--accent3)">
+        <div class="kpi-icon" style="background: rgba(139,92,246,0.15)">🛏️</div>
+        <div class="kpi-label">Avg Length of Stay</div>
+        <div class="kpi-value" style="color: var(--accent3)">15.5 days</div>
+        <div class="kpi-sub"><span class="kpi-badge badge-warn">Monitor</span> Industry avg: 5.4d</div>
+      </div>
+    </div>
+
+    <!-- ALERT -->
+    <div class="alert-strip">
+      ⚠️ <strong>Clinical Alert:</strong> <span>33.6% of test results are Abnormal — above benchmark threshold of 25%. Immediate review recommended.</span>
+    </div>
+
+    <!-- ROW 1 -->
+    <div class="grid-2-1">
+      <!-- Monthly Admissions Line Chart -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Monthly Admissions Trend</div>
+            <div class="card-subtitle">24-month rolling · Jun 2022 – May 2024</div>
+          </div>
+          <div class="chip">VOLUME</div>
+        </div>
+        <div id="lineChartWrap" style="position:relative; height: 180px;">
+          <svg id="lineChart" width="100%" height="180" viewBox="0 0 700 180" preserveAspectRatio="none"></svg>
+          <div class="tooltip" id="lineTip"></div>
+        </div>
+      </div>
+
+      <!-- Admission Type Donut -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Admission Type</div>
+            <div class="card-subtitle">Split across all patients</div>
+          </div>
+        </div>
+        <div class="donut-wrap">
+          <svg class="donut-svg" width="130" height="130" viewBox="0 0 130 130">
+            <circle cx="65" cy="65" r="50" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="18"/>
+            <!-- Elective 33.6% -->
+            <circle id="d1" cx="65" cy="65" r="50" fill="none" stroke="#3b82f6" stroke-width="18"
+              stroke-dasharray="0 314" stroke-linecap="round" transform="rotate(-90 65 65)" style="transition: stroke-dasharray 1.2s ease"/>
+            <!-- Urgent 33.5% -->
+            <circle id="d2" cx="65" cy="65" r="50" fill="none" stroke="#06b6d4" stroke-width="18"
+              stroke-dasharray="0 314" stroke-linecap="round" transform="rotate(-90 65 65)" style="transition: stroke-dasharray 1.2s ease 0.2s"/>
+            <!-- Emergency 32.9% -->
+            <circle id="d3" cx="65" cy="65" r="50" fill="none" stroke="#8b5cf6" stroke-width="18"
+              stroke-dasharray="0 314" stroke-linecap="round" transform="rotate(-90 65 65)" style="transition: stroke-dasharray 1.2s ease 0.4s"/>
+            <text x="65" y="60" text-anchor="middle" fill="white" font-family="Syne,sans-serif" font-size="18" font-weight="700">3</text>
+            <text x="65" y="78" text-anchor="middle" fill="#64748b" font-family="DM Mono,monospace" font-size="9">TYPES</text>
+          </svg>
+          <div class="donut-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div><div class="legend-label">Elective</div><div class="legend-val">18,655</div><div class="legend-pct">33.6%</div></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div><div class="legend-label">Urgent</div><div class="legend-val">18,576</div><div class="legend-pct">33.5%</div></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div><div class="legend-label">Emergency</div><div class="legend-val">18,269</div><div class="legend-pct">32.9%</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 2 -->
+    <div class="grid-3">
+      <!-- Top Conditions -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Medical Conditions</div>
+            <div class="card-subtitle">Patient distribution by diagnosis</div>
+          </div>
+          <div class="chip">TOP 6</div>
+        </div>
+        <div class="bar-chart" id="conditionsBar"></div>
+      </div>
+
+      <!-- Insurance Breakdown -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Insurance Providers</div>
+            <div class="card-subtitle">Coverage by payer mix</div>
+          </div>
+        </div>
+        <div class="bar-chart" id="insuranceBar"></div>
+      </div>
+
+      <!-- Test Results -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Diagnostic Outcomes</div>
+            <div class="card-subtitle">Test result classification</div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <div id="testResultGauges"></div>
+          <div class="stat-grid" style="margin-top:8px">
+            <div class="stat-pill">
+              <div class="stat-pill-label">Abnormal Rate</div>
+              <div class="stat-pill-val" style="color:var(--danger)">33.6%</div>
+            </div>
+            <div class="stat-pill">
+              <div class="stat-pill-label">Normal Rate</div>
+              <div class="stat-pill-val" style="color:var(--success)">33.4%</div>
+            </div>
+            <div class="stat-pill">
+              <div class="stat-pill-label">Inconclusive</div>
+              <div class="stat-pill-val" style="color:var(--warn)">33.1%</div>
+            </div>
+            <div class="stat-pill">
+              <div class="stat-pill-label">Total Tests</div>
+              <div class="stat-pill-val">55,500</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 3 -->
+    <div class="grid-2">
+      <!-- Age Distribution -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Patient Age Distribution</div>
+            <div class="card-subtitle">Segmented by age cohort</div>
+          </div>
+        </div>
+        <div id="ageBar" class="bar-chart"></div>
+      </div>
+
+      <!-- Gender + Blood Type -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Demographics & Blood Types</div>
+            <div class="card-subtitle">Gender parity and blood group spread</div>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center;">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+            <svg width="110" height="110" viewBox="0 0 110 110">
+              <circle cx="55" cy="55" r="40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="16"/>
+              <circle id="genderM" cx="55" cy="55" r="40" fill="none" stroke="#3b82f6" stroke-width="16"
+                stroke-dasharray="0 251" stroke-linecap="butt" transform="rotate(-90 55 55)" style="transition: stroke-dasharray 1s ease"/>
+              <circle id="genderF" cx="55" cy="55" r="40" fill="none" stroke="#ec4899" stroke-width="16"
+                stroke-dasharray="0 251" stroke-linecap="butt" transform="rotate(-90 55 55)" style="transition: stroke-dasharray 1s ease 0.2s"/>
+              <text x="55" y="50" text-anchor="middle" fill="white" font-family="Syne" font-size="14" font-weight="700">50/50</text>
+              <text x="55" y="66" text-anchor="middle" fill="#64748b" font-family="DM Mono" font-size="8">SPLIT</text>
+            </svg>
+            <div style="display: flex; gap: 16px; font-size: 12px;">
+              <div style="display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:2px;background:#3b82f6"></div><span style="color:var(--text-mid)">Male 50.0%</span></div>
+              <div style="display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:2px;background:#ec4899"></div><span style="color:var(--text-mid)">Female 50.0%</span></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text-dim); margin-bottom:12px; font-family:'DM Mono',monospace; letter-spacing:1px; text-transform:uppercase;">Blood Groups</div>
+            <div id="bloodGrid" style="display:grid; grid-template-columns: repeat(2,1fr); gap:6px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end overview -->
+
+  <!-- ========== CLINICAL PAGE ========== -->
+  <div class="page" id="page-clinical">
+
+    <div class="kpi-row">
+      <div class="kpi-card" style="--accent-color: var(--danger)">
+        <div class="kpi-icon" style="background: rgba(239,68,68,0.15)">🔴</div>
+        <div class="kpi-label">Abnormal Results</div>
+        <div class="kpi-value" style="color: var(--danger)">18,627</div>
+        <div class="kpi-sub"><span class="kpi-badge" style="background:rgba(239,68,68,0.15);color:var(--danger)">33.6%</span> of all tests</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--success)">
+        <div class="kpi-icon" style="background: rgba(16,185,129,0.15)">✅</div>
+        <div class="kpi-label">Normal Results</div>
+        <div class="kpi-value" style="color: var(--success)">18,517</div>
+        <div class="kpi-sub"><span class="kpi-badge badge-up">33.4%</span> of all tests</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--warn)">
+        <div class="kpi-icon" style="background: rgba(245,158,11,0.15)">⚠️</div>
+        <div class="kpi-label">Inconclusive</div>
+        <div class="kpi-value" style="color: var(--warn)">18,356</div>
+        <div class="kpi-sub"><span class="kpi-badge badge-warn">33.1%</span> require follow-up</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--accent3)">
+        <div class="kpi-icon" style="background: rgba(139,92,246,0.15)">💊</div>
+        <div class="kpi-label">Medications Used</div>
+        <div class="kpi-value" style="color: var(--accent3)">5</div>
+        <div class="kpi-sub"><span class="kpi-badge badge-info">Core</span> formulary drugs</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Conditions vs Revenue -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Revenue by Medical Condition</div>
+            <div class="card-subtitle">Billing contribution per diagnosis</div>
+          </div>
+          <div class="chip">$238M PEAK</div>
+        </div>
+        <div class="bar-chart" id="condRevBar"></div>
+      </div>
+
+      <!-- Medication Distribution -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Medication Distribution</div>
+            <div class="card-subtitle">Prescriptions across patient base</div>
+          </div>
+        </div>
+        <div class="bar-chart" id="medBar"></div>
+      </div>
+    </div>
+
+    <!-- Conditions Table -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Condition Intelligence Matrix</div>
+          <div class="card-subtitle">Detailed breakdown by diagnosis category</div>
+        </div>
+        <div class="chip">CLINICAL DETAIL</div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Condition</th>
+            <th>Patient Count</th>
+            <th>Revenue</th>
+            <th>Avg Revenue</th>
+            <th>Share of Total</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="condTable"></tbody>
+      </table>
+    </div>
+
+  </div><!-- end clinical -->
+
+  <!-- ========== FINANCIAL PAGE ========== -->
+  <div class="page" id="page-financial">
+
+    <div class="kpi-row">
+      <div class="kpi-card" style="--accent-color: var(--success)">
+        <div class="kpi-icon" style="background: rgba(16,185,129,0.15)">💵</div>
+        <div class="kpi-label">Total Revenue</div>
+        <div class="kpi-value" style="color: var(--success)">$1.417B</div>
+        <div class="kpi-sub">Across all patients & conditions</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--accent)">
+        <div class="kpi-icon" style="background: rgba(59,130,246,0.15)">📊</div>
+        <div class="kpi-label">Avg Billing</div>
+        <div class="kpi-value" style="color: var(--accent)">$25,539</div>
+        <div class="kpi-sub">Per patient admission</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--accent2)">
+        <div class="kpi-icon" style="background: rgba(6,182,212,0.15)">🏦</div>
+        <div class="kpi-label">Top Payer</div>
+        <div class="kpi-value" style="color: var(--accent2); font-size:22px">Cigna</div>
+        <div class="kpi-sub"><span class="kpi-badge badge-info">11,249</span> covered patients</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--accent3)">
+        <div class="kpi-icon" style="background: rgba(139,92,246,0.15)">🔝</div>
+        <div class="kpi-label">Top Revenue Dx</div>
+        <div class="kpi-value" style="color: var(--accent3); font-size:20px">Diabetes</div>
+        <div class="kpi-sub">$238.5M billed</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Insurance Revenue Share -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Payer Mix Analysis</div>
+            <div class="card-subtitle">Patient distribution by insurance provider</div>
+          </div>
+        </div>
+        <div class="donut-wrap">
+          <svg class="donut-svg" width="140" height="140" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r="54" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="20"/>
+            <circle id="ins1" cx="70" cy="70" r="54" fill="none" stroke="#3b82f6" stroke-width="20"
+              stroke-dasharray="0 339" transform="rotate(-90 70 70)" style="transition: stroke-dasharray 1s ease"/>
+            <circle id="ins2" cx="70" cy="70" r="54" fill="none" stroke="#06b6d4" stroke-width="20"
+              stroke-dasharray="0 339" transform="rotate(-90 70 70)" style="transition: stroke-dasharray 1s ease 0.15s"/>
+            <circle id="ins3" cx="70" cy="70" r="54" fill="none" stroke="#8b5cf6" stroke-width="20"
+              stroke-dasharray="0 339" transform="rotate(-90 70 70)" style="transition: stroke-dasharray 1s ease 0.3s"/>
+            <circle id="ins4" cx="70" cy="70" r="54" fill="none" stroke="#10b981" stroke-width="20"
+              stroke-dasharray="0 339" transform="rotate(-90 70 70)" style="transition: stroke-dasharray 1s ease 0.45s"/>
+            <circle id="ins5" cx="70" cy="70" r="54" fill="none" stroke="#f59e0b" stroke-width="20"
+              stroke-dasharray="0 339" transform="rotate(-90 70 70)" style="transition: stroke-dasharray 1s ease 0.6s"/>
+            <text x="70" y="65" text-anchor="middle" fill="white" font-family="Syne" font-size="20" font-weight="700">5</text>
+            <text x="70" y="82" text-anchor="middle" fill="#64748b" font-family="DM Mono" font-size="9">PAYERS</text>
+          </svg>
+          <div class="donut-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div><div class="legend-label">Cigna</div><div class="legend-val">11,249</div><div class="legend-pct">20.3%</div></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div><div class="legend-label">Medicare</div><div class="legend-val">11,154</div><div class="legend-pct">20.1%</div></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div><div class="legend-label">UnitedHealthcare</div><div class="legend-val">11,125</div><div class="legend-pct">20.0%</div></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div><div class="legend-label">Blue Cross</div><div class="legend-val">11,059</div><div class="legend-pct">19.9%</div></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div><div class="legend-label">Aetna</div><div class="legend-val">10,913</div><div class="legend-pct">19.7%</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Revenue by Condition bars -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Revenue by Diagnosis</div>
+            <div class="card-subtitle">Top revenue-generating conditions</div>
+          </div>
+          <div class="chip">$M SCALE</div>
+        </div>
+        <div class="bar-chart" id="condRevBar2"></div>
+      </div>
+    </div>
+
+    <!-- Financial Summary Table -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Financial Performance by Insurance Payer</div>
+          <div class="card-subtitle">Revenue, volume and billing metrics</div>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Insurance Provider</th>
+            <th>Patients</th>
+            <th>Market Share</th>
+            <th>Est. Revenue</th>
+            <th>Avg Billing</th>
+            <th>Segment</th>
+          </tr>
+        </thead>
+        <tbody id="insuranceTable"></tbody>
+      </table>
+    </div>
+
+  </div><!-- end financial -->
+
+  <!-- ========== OPERATIONS PAGE ========== -->
+  <div class="page" id="page-operations">
+
+    <div class="kpi-row">
+      <div class="kpi-card" style="--accent-color: var(--accent)">
+        <div class="kpi-icon" style="background: rgba(59,130,246,0.15)">🏨</div>
+        <div class="kpi-label">Hospitals in Network</div>
+        <div class="kpi-value" style="color: var(--accent)">1,000+</div>
+        <div class="kpi-sub">Distributed care network</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--accent2)">
+        <div class="kpi-icon" style="background: rgba(6,182,212,0.15)">📅</div>
+        <div class="kpi-label">Avg LOS</div>
+        <div class="kpi-value" style="color: var(--accent2)">15.5 days</div>
+        <div class="kpi-sub"><span class="kpi-badge badge-warn">↑ High</span> vs 5.4d benchmark</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--success)">
+        <div class="kpi-icon" style="background: rgba(16,185,129,0.15)">⚡</div>
+        <div class="kpi-label">Emergency Rate</div>
+        <div class="kpi-value" style="color: var(--success)">32.9%</div>
+        <div class="kpi-sub">18,269 emergency admits</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--warn)">
+        <div class="kpi-icon" style="background: rgba(245,158,11,0.15)">🩺</div>
+        <div class="kpi-label">Elective Rate</div>
+        <div class="kpi-value" style="color: var(--warn)">33.6%</div>
+        <div class="kpi-sub">18,655 planned admissions</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Top Hospitals -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Top Hospitals by Revenue</div>
+            <div class="card-subtitle">Network facility performance</div>
+          </div>
+          <div class="chip">TOP 8</div>
+        </div>
+        <div class="bar-chart" id="hospitalBar"></div>
+      </div>
+
+      <!-- Admission Type Trend -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Admission Mix Breakdown</div>
+            <div class="card-subtitle">Volume vs type analysis</div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:13px;color:var(--text-mid)">Elective</span>
+              <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent)">18,655</span>
+            </div>
+            <div style="height:10px;background:rgba(255,255,255,0.05);border-radius:5px;overflow:hidden">
+              <div class="admElective" style="height:100%;width:0%;background:linear-gradient(90deg,#3b82f6,#60a5fa);border-radius:5px;transition:width 1s ease"></div>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:13px;color:var(--text-mid)">Urgent</span>
+              <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--warn)">18,576</span>
+            </div>
+            <div style="height:10px;background:rgba(255,255,255,0.05);border-radius:5px;overflow:hidden">
+              <div class="admUrgent" style="height:100%;width:0%;background:linear-gradient(90deg,#f59e0b,#fbbf24);border-radius:5px;transition:width 1s ease 0.2s"></div>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:13px;color:var(--text-mid)">Emergency</span>
+              <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--danger)">18,269</span>
+            </div>
+            <div style="height:10px;background:rgba(255,255,255,0.05);border-radius:5px;overflow:hidden">
+              <div class="admEmergency" style="height:100%;width:0%;background:linear-gradient(90deg,#ef4444,#f87171);border-radius:5px;transition:width 1s ease 0.4s"></div>
+            </div>
+          </div>
+
+          <div style="margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--border);">
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase">Operational Insights</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="stat-pill"><div class="stat-pill-label">Total Admissions</div><div class="stat-pill-val">55,500</div></div>
+              <div class="stat-pill"><div class="stat-pill-label">Emergency Ratio</div><div class="stat-pill-val" style="color:var(--danger)">32.9%</div></div>
+              <div class="stat-pill"><div class="stat-pill-label">LOS Outlier Risk</div><div class="stat-pill-val" style="color:var(--warn)">HIGH</div></div>
+              <div class="stat-pill"><div class="stat-pill-label">Payer Diversity</div><div class="stat-pill-val" style="color:var(--success)">Good</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ops Summary Table -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Top Hospital Network Performance</div>
+          <div class="card-subtitle">Ranked by revenue contribution</div>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Hospital</th>
+            <th>Revenue</th>
+            <th>Performance</th>
+          </tr>
+        </thead>
+        <tbody id="hospitalTable"></tbody>
+      </table>
+    </div>
+
+  </div><!-- end operations -->
+
+</div><!-- end dashboard -->
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const data = {
+  total_patients: 55500,
+  total_revenue: 1417432043.4,
+  avg_billing: 25539.32,
+  avg_los: 15.51,
+  gender: { Male: 27774, Female: 27726 },
+  conditions: { Arthritis: 9308, Diabetes: 9304, Hypertension: 9245, Obesity: 9231, Cancer: 9227, Asthma: 9185 },
+  admission_types: { Elective: 18655, Urgent: 18576, Emergency: 18269 },
+  insurance: { Cigna: 11249, Medicare: 11154, UnitedHealthcare: 11125, "Blue Cross": 11059, Aetna: 10913 },
+  test_results: { Abnormal: 18627, Normal: 18517, Inconclusive: 18356 },
+  age_groups: { "<18": 888, "18-35": 13644, "35-50": 12301, "50-65": 12417, "65+": 16250 },
+  rev_by_condition: { Diabetes: 238539725, Obesity: 238214920, Arthritis: 237329120, Hypertension: 235720650, Asthma: 235459765, Cancer: 232167861 },
+  monthly_admissions: {"2022-06":970,"2022-07":951,"2022-08":955,"2022-09":919,"2022-10":912,"2022-11":896,"2022-12":958,"2023-01":931,"2023-02":880,"2023-03":922,"2023-04":898,"2023-05":927,"2023-06":961,"2023-07":919,"2023-08":968,"2023-09":920,"2023-10":898,"2023-11":881,"2023-12":921,"2024-01":909,"2024-02":880,"2024-03":906,"2024-04":946,"2024-05":213},
+  top_hospitals: {"Johnson PLC":1084202,"LLC Smith":1030189,"Smith PLC":1029424,"Ltd Smith":1003365,"Smith Ltd":970035,"Johnson Inc":941117,"Group Smith":902975,"Inc Brown":890756},
+  blood_types: {"A-":6969,"A+":6956,"AB+":6947,"AB-":6945,"B+":6945,"B-":6944,"O+":6917,"O-":6877},
+  medications: { Lipitor: 11140, Ibuprofen: 11127, Aspirin: 11094, Paracetamol: 11071, Penicillin: 11068 }
+};
+
+const COLORS = ['#3b82f6','#06b6d4','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6'];
+
+function fmt(n) { return n >= 1e9 ? '$' + (n/1e9).toFixed(2) + 'B' : n >= 1e6 ? '$' + (n/1e6).toFixed(1) + 'M' : n >= 1e3 ? '$' + (n/1e3).toFixed(0) + 'K' : '$' + n.toFixed(0); }
+function fmtN(n) { return n.toLocaleString(); }
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('page-' + name).classList.add('active');
+  setTimeout(initAnimations, 100);
+}
+
+// ============================================================
+// BAR CHART RENDERER
+// ============================================================
+function renderBar(containerId, items, colorOffset = 0, valueFormatter = fmtN) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const max = Math.max(...items.map(i => i.val));
+  container.innerHTML = items.map((item, idx) => `
+    <div class="bar-row">
+      <div class="bar-label">${item.label}</div>
+      <div class="bar-track">
+        <div class="bar-fill" data-width="${(item.val / max * 100).toFixed(1)}"
+          style="width: 0%; background: ${COLORS[(idx + colorOffset) % COLORS.length]}; opacity: 0.85"></div>
+      </div>
+      <div class="bar-val">${valueFormatter(item.val)}</div>
+    </div>
+  `).join('');
+  setTimeout(() => {
+    container.querySelectorAll('.bar-fill').forEach((el, i) => {
+      setTimeout(() => { el.style.width = el.dataset.width + '%'; }, i * 80);
+    });
+  }, 50);
+}
+
+// ============================================================
+// LINE CHART
+// ============================================================
+function renderLineChart() {
+  const svg = document.getElementById('lineChart');
+  if (!svg) return;
+  const vals = Object.values(data.monthly_admissions).slice(0, 23); // exclude partial May
+  const labels = Object.keys(data.monthly_admissions).slice(0, 23);
+  const W = 700, H = 180, pad = { t: 20, r: 20, b: 30, l: 40 };
+  const min = Math.min(...vals) - 30, max = Math.max(...vals) + 30;
+  const x = i => pad.l + (i / (vals.length - 1)) * (W - pad.l - pad.r);
+  const y = v => H - pad.b - ((v - min) / (max - min)) * (H - pad.t - pad.b);
+
+  // Grid lines
+  let gridLines = '';
+  for (let i = 0; i <= 4; i++) {
+    const yv = H - pad.b - (i / 4) * (H - pad.t - pad.b);
+    const label = Math.round(min + (i / 4) * (max - min));
+    gridLines += `<line x1="${pad.l}" y1="${yv}" x2="${W - pad.r}" y2="${yv}" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>`;
+    gridLines += `<text x="${pad.l - 6}" y="${yv + 4}" text-anchor="end" fill="#475569" font-size="9" font-family="DM Mono">${label}</text>`;
+  }
+
+  // X labels every 4 months
+  let xLabels = '';
+  vals.forEach((_, i) => {
+    if (i % 4 === 0) {
+      const lbl = labels[i].replace('20','').replace('-', '/');
+      xLabels += `<text x="${x(i)}" y="${H - 4}" text-anchor="middle" fill="#475569" font-size="9" font-family="DM Mono">${lbl}</text>`;
+    }
+  });
+
+  // Path
+  const pts = vals.map((v, i) => `${x(i)},${y(v)}`);
+  const pathD = 'M' + pts.join(' L');
+  const areaD = `M${x(0)},${H - pad.b} L` + pts.join(' L') + ` L${x(vals.length - 1)},${H - pad.b} Z`;
+
+  // Dots
+  const dots = vals.map((v, i) => `
+    <circle class="chartDot" cx="${x(i)}" cy="${y(v)}" r="3" fill="#3b82f6" opacity="0.8"
+      data-label="${labels[i]}" data-val="${v}"
+      style="cursor:pointer" onmouseenter="showLineTip(event, '${labels[i]}', ${v})" onmouseleave="hideLineTip()"/>
+  `).join('');
+
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/>
+        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    ${gridLines}
+    ${xLabels}
+    <path d="${areaD}" fill="url(#lineGrad)"/>
+    <path d="${pathD}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>
+    ${dots}
+  `;
+}
+
+function showLineTip(e, label, val) {
+  const tip = document.getElementById('lineTip');
+  const wrap = document.getElementById('lineChartWrap');
+  const rect = wrap.getBoundingClientRect();
+  const er = e.target.getBoundingClientRect();
+  tip.style.display = 'block';
+  tip.style.left = (er.left - rect.left + 10) + 'px';
+  tip.style.top = (er.top - rect.top - 30) + 'px';
+  tip.innerHTML = `<strong>${label}</strong>: ${val} admissions`;
+}
+function hideLineTip() { document.getElementById('lineTip').style.display = 'none'; }
+
+// ============================================================
+// DONUT CHART HELPERS
+// ============================================================
+function animateDonut(segments) {
+  // segments: [{id, pct, offset}]
+  const C = 314;
+  segments.forEach(s => {
+    const el = document.getElementById(s.id);
+    if (el) {
+      const dash = (s.pct / 100 * C).toFixed(2);
+      const gap = (C - dash).toFixed(2);
+      const off = ((s.offset / 100) * C).toFixed(2);
+      el.style.strokeDasharray = `${dash} ${C - dash}`;
+      el.style.strokeDashoffset = -off;
+    }
+  });
+}
+
+// ============================================================
+// BLOOD TYPE GRID
+// ============================================================
+function renderBloodGrid() {
+  const container = document.getElementById('bloodGrid');
+  if (!container) return;
+  const types = Object.entries(data.blood_types);
+  const max = Math.max(...types.map(t => t[1]));
+  container.innerHTML = types.map(([type, cnt]) => {
+    const pct = ((cnt / max) * 100).toFixed(0);
+    const opacity = 0.3 + (cnt / max) * 0.7;
+    return `
+      <div style="background: rgba(59,130,246,${opacity}); border-radius: 8px; padding: 8px 4px; text-align: center;">
+        <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: white">${type}</div>
+        <div style="font-family: 'DM Mono', monospace; font-size: 9px; color: rgba(255,255,255,0.6); margin-top: 2px">${(cnt/1000).toFixed(1)}K</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============================================================
+// TEST RESULT GAUGES
+// ============================================================
+function renderTestGauges() {
+  const container = document.getElementById('testResultGauges');
+  if (!container) return;
+  const total = 55500;
+  const items = [
+    { label: 'Abnormal', val: 18627, color: '#ef4444' },
+    { label: 'Normal', val: 18517, color: '#10b981' },
+    { label: 'Inconclusive', val: 18356, color: '#f59e0b' }
+  ];
+  container.innerHTML = items.map(item => {
+    const pct = (item.val / total * 100).toFixed(1);
+    return `
+      <div style="margin-bottom: 12px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:12px;color:var(--text-mid)">${item.label}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;color:${item.color}">${pct}%</span>
+        </div>
+        <div style="height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:0%;background:${item.color};border-radius:3px;transition:width 1.2s ease" data-w="${pct}"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  setTimeout(() => {
+    container.querySelectorAll('[data-w]').forEach((el, i) => {
+      setTimeout(() => el.style.width = el.dataset.w + '%', i * 150);
+    });
+  }, 100);
+}
+
+// ============================================================
+// CONDITION TABLE
+// ============================================================
+function renderCondTable() {
+  const tbody = document.getElementById('condTable');
+  if (!tbody) return;
+  const conditions = Object.entries(data.conditions);
+  tbody.innerHTML = conditions.map(([cond, cnt]) => {
+    const rev = data.rev_by_condition[cond] || 0;
+    const avgRev = rev / cnt;
+    const share = (cnt / data.total_patients * 100).toFixed(1);
+    const statuses = { Arthritis: '🟡 Monitor', Diabetes: '🔴 High Risk', Hypertension: '🔴 High Risk', Obesity: '🟡 Monitor', Cancer: '🔴 Critical', Asthma: '🟢 Stable' };
+    return `<tr>
+      <td class="td-primary">${cond}</td>
+      <td>${fmtN(cnt)}</td>
+      <td style="color:var(--success)">${fmt(rev)}</td>
+      <td>${fmt(avgRev)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px">
+            <div style="width:${share}%;height:100%;background:var(--accent);border-radius:2px"></div>
+          </div>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim)">${share}%</span>
+        </div>
+      </td>
+      <td>${statuses[cond] || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// INSURANCE TABLE
+// ============================================================
+function renderInsuranceTable() {
+  const tbody = document.getElementById('insuranceTable');
+  if (!tbody) return;
+  const payers = Object.entries(data.insurance);
+  const segments = ['Commercial', 'Government', 'Commercial', 'Commercial', 'Commercial'];
+  tbody.innerHTML = payers.map(([payer, cnt], i) => {
+    const share = (cnt / data.total_patients * 100).toFixed(1);
+    const estRev = cnt * data.avg_billing;
+    return `<tr>
+      <td class="td-primary">${payer}</td>
+      <td>${fmtN(cnt)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px">
+            <div style="width:${(parseFloat(share) / 21 * 100).toFixed(0)}%;height:100%;background:${COLORS[i]};border-radius:2px"></div>
+          </div>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim)">${share}%</span>
+        </div>
+      </td>
+      <td style="color:var(--success)">${fmt(estRev)}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${fmt(data.avg_billing)}</td>
+      <td><span style="font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,0.06);color:var(--text-dim)">${segments[i]}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// HOSPITAL TABLE
+// ============================================================
+function renderHospitalTable() {
+  const tbody = document.getElementById('hospitalTable');
+  if (!tbody) return;
+  const hospitals = Object.entries(data.top_hospitals);
+  const max = hospitals[0][1];
+  tbody.innerHTML = hospitals.map(([hosp, rev], i) => {
+    const pct = (rev / max * 100).toFixed(0);
+    return `<tr>
+      <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-dim)">#${i+1}</span></td>
+      <td class="td-primary">${hosp}</td>
+      <td style="color:var(--success)">${fmt(rev)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;min-width:80px">
+            <div style="width:${pct}%;height:100%;background:${COLORS[i % COLORS.length]};border-radius:2px"></div>
+          </div>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim)">${pct}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// INIT ALL ANIMATIONS
+// ============================================================
+function initAnimations() {
+  // Overview
+  renderBar('conditionsBar', Object.entries(data.conditions).map(([k,v]) => ({label:k, val:v})));
+  renderBar('insuranceBar', Object.entries(data.insurance).map(([k,v]) => ({label:k, val:v})), 2);
+  renderBar('ageBar', Object.entries(data.age_groups).map(([k,v]) => ({label:k, val:v})), 4);
+  renderTestGauges();
+  renderBloodGrid();
+  renderLineChart();
+
+  // Donut - Admission Types
+  setTimeout(() => {
+    animateDonut([
+      { id: 'd1', pct: 33.6, offset: 0 },
+      { id: 'd2', pct: 33.5, offset: 33.6 },
+      { id: 'd3', pct: 32.9, offset: 67.1 }
+    ]);
+    // Gender
+    animateDonut([
+      { id: 'genderM', pct: 50.0, offset: 0 },
+      { id: 'genderF', pct: 50.0, offset: 50.0 }
+    ]);
+    // Insurance donut
+    animateDonut([
+      { id: 'ins1', pct: 20.3, offset: 0 },
+      { id: 'ins2', pct: 20.1, offset: 20.3 },
+      { id: 'ins3', pct: 20.0, offset: 40.4 },
+      { id: 'ins4', pct: 19.9, offset: 60.4 },
+      { id: 'ins5', pct: 19.7, offset: 80.3 }
+    ]);
+  }, 200);
+
+  // Clinical
+  renderBar('condRevBar', Object.entries(data.rev_by_condition).map(([k,v]) => ({label:k, val:v})), 0, v => fmt(v));
+  renderBar('condRevBar2', Object.entries(data.rev_by_condition).map(([k,v]) => ({label:k, val:v})), 0, v => fmt(v));
+  renderBar('medBar', Object.entries(data.medications).map(([k,v]) => ({label:k, val:v})), 3);
+  renderCondTable();
+
+  // Financial
+  renderInsuranceTable();
+
+  // Operations
+  renderBar('hospitalBar', Object.entries(data.top_hospitals).map(([k,v]) => ({label:k, val:v})), 0, v => fmt(v));
+  renderHospitalTable();
+
+  // Admission bars
+  const total = 55500;
+  setTimeout(() => {
+    document.querySelectorAll('.admElective').forEach(el => el.style.width = '100%');
+    document.querySelectorAll('.admUrgent').forEach(el => el.style.width = (18576/18655*100).toFixed(1) + '%');
+    document.querySelectorAll('.admEmergency').forEach(el => el.style.width = (18269/18655*100).toFixed(1) + '%');
+  }, 300);
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+window.addEventListener('load', () => {
+  initAnimations();
+});
+</script>
+</body>
+</html>
