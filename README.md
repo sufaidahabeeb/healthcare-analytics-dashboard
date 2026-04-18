@@ -88,4 +88,4 @@ This background gives me something most data analysts don't have: the ability to
 
 I am currently open to remote roles in **healthcare analytics, digital health consulting, or AI workflow implementation** — particularly where clinical domain expertise adds value to data and decision-making.
 
-Feel free to connect with me on [LinkedIn](www.linkedin.com/in/sufaida-habeeb).
+Feel free to connect with me on [LinkedIn](www.linkedin.com/in/sufaida-habeeb)
